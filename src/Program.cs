@@ -1,18 +1,43 @@
 using Spectre.Console;
 using ToolManutencao.Services;
 
-AnsiConsole.Clear();
-AnsiConsole.Write(new FigletText("Service Tool").Centered().Color(Color.Blue));
-
-// Instanciando a classe de serviço (POO)
 var hardwareService = new HardwareService();
+bool emExecucao = true;
 
-AnsiConsole.Status()
-    .Start("Escaneando hardware...", ctx => 
+while (emExecucao)
+{
+    AnsiConsole.Clear();
+    AnsiConsole.Write(new FigletText("Service Tool").Centered().Color(Color.Red));
+
+    // Menu de Seleção
+    var opcao = AnsiConsole.Prompt(
+        new SelectionPrompt<string>()
+            .Title("[yellow]O que deseja fazer hoje?[/]")
+            .PageSize(10)
+            .AddChoices(new[] {
+                "Ver Informações do Hardware",
+                "Instalar Softwares Básicos (Winget)",
+                "Sair"
+            }));
+
+    switch (opcao)
     {
-        var table = hardwareService.GetHardwareTable();
-        AnsiConsole.Write(table);
-    });
+        case "Ver Informações do Hardware":
+            AnsiConsole.Status().Start("Lendo hardware...", ctx => {
+                var table = hardwareService.GetHardwareTable();
+                AnsiConsole.Write(table);
+            });
+            AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar ao menu...[/]");
+            Console.ReadKey();
+            break;
 
-AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para sair...[/]");
-Console.ReadKey();
+        case "Instalar Softwares Básicos (Winget)":
+            AnsiConsole.MarkupLine("[red]Em breve: Integração com Winget![/]");
+            Console.ReadKey();
+            break;
+
+        case "Sair":
+            emExecucao = false;
+            break;
+    }
+}
