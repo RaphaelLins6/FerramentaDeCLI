@@ -1,0 +1,59 @@
+# SYSTEM HEALTH & SETUP CLI
+
+## 📝 Descrição
+Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação de diagnósticos de hardware e instalação de softwares essenciais (setup) em novas máquinas.
+
+---
+
+## ✨ Funcionalidades Principais
+* **Verificação de Hardware:** Monitoramento de CPU, RAM e Disco via WMI.
+* **Instalação Automatizada:** Setup de programas essenciais via **Winget**.
+* **Diagnóstico de Saúde:** Relatório rápido sobre a integridade do sistema.
+
+---
+
+## 📂 Estrutura do Projeto
+A organização das pastas foi pensada para separar a interface da lógica de negócio:
+
+```
+ToolManutencao/
+│
+├── src/
+│   └── ToolManutencao.Console/         # Projeto principal
+│       ├── Commands/                   # Lógica dos comandos do menu
+│       ├── Services/                   # Lógica de hardware, WMI e Winget
+│       ├── Models/                     # Classes de dados (ex: HardwareInfo)
+│       ├── Program.cs                  # Ponto de entrada (Main)
+│       └── ToolManutencao.csproj       # Arquivo de projeto .NET
+│
+├── .gitignore                          # Filtro de arquivos para o Git
+└── README.md                           # Documentação do projeto
+```
+
+---
+
+## 🔍 Explicação dos Diretórios
+* **Commands:** Gerencia o que acontece quando o usuário escolhe uma opção no menu. Separa a interface da lógica bruta.
+* **Services:** Onde a "mágica" acontece. Contém o código que fala com o Windows para ler sensores ou baixar programas.
+* **Models:** Contém as estruturas de dados. É como o sistema entende o que é um "Processador" ou uma "Memória".
+* **Program.cs:** O ponto de partida onde o sistema nasce e configura o ambiente de execução.
+
+## ⚙️ Requisitos
+* **Windows 10/11** (Para suporte total ao Winget e WMI).
+* **.NET SDK 8.0+.**
+* **Permissões de Administrador** (Necessário para a instalação de softwares e certas consultas de hardware).
+
+## 🚀 Como Compilar e Rodar
+1 - Certifique-se de ter o SDK do .NET instalado.
+2 - Abra o terminal na pasta raiz do projeto.
+3 - Navegue até o diretório do console:
+
+```
+cd src/ToolManutencao.Console
+```
+
+4 - Execute o comando:
+
+```
+dotnet run
+```
