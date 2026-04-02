@@ -7,7 +7,7 @@ bool emExecucao = true;
 while (emExecucao)
 {
     AnsiConsole.Clear();
-    AnsiConsole.Write(new FigletText("Service Tool").Centered().Color(Color.Red));
+    AnsiConsole.Write(new FigletText("Service Tool").Centered().Color(new Color(255, 135, 0)));
 
     // Menu de Seleção
     var opcao = AnsiConsole.Prompt(
