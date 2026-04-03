@@ -1,4 +1,4 @@
-# SYSTEM HEALTH & SETUP CLI
+# FERRAMENTA DE MANUTENÇÃO DE TI
 
 ## 📝 Descrição
 Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação de diagnósticos de hardware e instalação de softwares essenciais (setup) em novas máquinas.
@@ -6,9 +6,11 @@ Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação d
 ---
 
 ## ✨ Funcionalidades Principais
-* **Verificação de Hardware:** Monitoramento de CPU, RAM e Disco via WMI.
-* **Instalação Automatizada:** Setup de programas essenciais via **Winget**.
+* **Verificação de Hardware:** Monitoramento de SO, CPU, RAM e Disco.
+* **Instalação Automatizada:** Menu de seleção múltipla para instalação silenciosa de navegadores, runtimes, compressores e ferramentas de acesso remoto.
 * **Diagnóstico de Saúde:** Relatório rápido sobre a integridade do sistema.
+* **Otimizações de Sistema:** Automação de comandos de CMD.
+* **Interface Moderna:** Relatório rápido sobre a integridade do sistema.
 
 ---
 
@@ -46,14 +48,14 @@ ToolManutencao/
 ## 🚀 Como Compilar e Rodar
 1 - Certifique-se de ter o SDK do .NET instalado.
 2 - Abra o terminal na pasta raiz do projeto.
-3 - Navegue até o diretório do console:
+3 - Para rodar diretamente:
 
 ```
-cd src/ToolManutencao.Console
+dotnet run --project src/FerramentaDeManutencao.Console
 ```
 
-4 - Execute o comando:
+4 - Para gerar o executável final:
 
 ```
-dotnet run
+dotnet publish -c Release -r win-x64 --self-contained
 ```
