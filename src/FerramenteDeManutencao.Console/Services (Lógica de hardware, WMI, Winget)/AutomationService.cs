@@ -151,5 +151,119 @@ namespace ToolManutencao.Services
             Process.Start(psi)?.WaitForExit();
         }
 
+        public void LimparArquivosTemporarios()
+        {
+            // 1. Obter discos prontos e adicionar opção global
+            var drives = DriveInfo.GetDrives()
+                .Where(d => d.IsReady)
+                .Select(d => d.Name)
+                .ToList();
+            
+            drives.Add("Limpar Todos");
+
+            // Menu de seleção estilizado
+            var escolha = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[yellow]Qual disco deseja limpar com o Cleanmgr?[/]")
+                    .PageSize(10)
+                    .MoreChoicesText("[grey](Mova para cima e para baixo para selecionar)[/]")
+                    .AddChoices(drives));
+
+            AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .Start("Limpando arquivos temporários...", ctx =>
+                {
+                    // --- PARTE 1: Limpeza Manual de Pastas Críticas ---
+                    string[] pastas = {
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch"),
+                        Path.GetTempPath(), // %temp% do usuário
+                        @"C:\Windows\Temp"  // temp do sistema
+                    };
+
+                    foreach (var pasta in pastas)
+                    {
+                        try
+                        {
+                            ctx.Status($"Acessando: {pasta}");
+                            DirectoryInfo di = new DirectoryInfo(pasta);
+
+                            // Deletar arquivos
+                            foreach (FileInfo file in di.GetFiles())
+                            {
+                                try { file.Delete(); } catch { /* Arquivo em uso, ignorar */ }
+                            }
+
+                            // Deletar subpastas
+                            foreach (DirectoryInfo dir in di.GetDirectories())
+                            {
+                                try { dir.Delete(true); } catch { /* Pasta em uso, ignorar */ }
+                            }
+                        }
+                        catch (Exception) 
+                        { 
+                            AnsiConsole.MarkupLine($"[grey]Aviso: Sem permissão total para acessar {pasta}[/]"); 
+                        }
+                    }
+
+                    // --- PARTE 2: Execução do Cleanmgr conforme escolha ---
+                    ctx.Status("[bold blue]Iniciando Cleanmgr...[/]");
+
+                    if (escolha == "Limpar Todos")
+                    {
+                        // O parâmetro /autoclean executa a limpeza padrão em todos os discos
+                        ExecutarComandoSimples("cleanmgr /autoclean");
+                    }
+                    else
+                    {
+                        // Extrai a letra do drive (ex: "C:")
+                        string driveLetra = escolha.Substring(0, 2);
+                        // /sagerun:1 usa configurações pré-definidas (pode exigir /sageset anterior)
+                        // Se preferir a limpeza padrão do drive, pode usar apenas cleanmgr /d {driveLetra}
+                        ExecutarComandoSimples($"cleanmgr /d {driveLetra} /sagerun:1");
+                    }
+
+                    AnsiConsole.MarkupLine("[[[green]OK[/]]] Limpeza de arquivos temporários concluída!");
+                });
+        }
+
+        public void RepararSistema()
+        {
+            AnsiConsole.MarkupLine("[bold yellow]Iniciando Reparo do Sistema e Limpeza de Componentes...[/]");
+            AnsiConsole.MarkupLine("[grey]Este processo é profundo e pode demorar alguns minutos. Não feche o terminal.[/]");
+            AnsiConsole.WriteLine();
+
+            // 1. SFC Scannow
+            AnsiConsole.Status().Start("Executando [cyan]SFC /Scannow[/] (Verificando integridade)...", ctx => 
+            {
+                ExecutarComandoSimples("sfc /scannow");
+                AnsiConsole.MarkupLine("[[[green]OK[/]]] Verificação de arquivos do sistema (SFC) finalizada.");
+            });
+
+            // 2. DISM ScanHealth
+            AnsiConsole.Status().Start("Executando [cyan]DISM ScanHealth[/] (Procurando corrupção)...", ctx => 
+            {
+                ExecutarComandoSimples("dism /online /cleanup-image /scanhealth");
+                AnsiConsole.MarkupLine("[[[green]OK[/]]] Verificação de imagem (ScanHealth) finalizada.");
+            });
+
+            // 3. DISM RestoreHealth
+            AnsiConsole.Status().Start("Executando [cyan]DISM RestoreHealth[/] (Reparando imagem)...", ctx => 
+            {
+                ExecutarComandoSimples("dism /online /cleanup-image /restorehealth");
+                AnsiConsole.MarkupLine("[[[green]OK[/]]] Reparo de imagem (RestoreHealth) finalizado.");
+            });
+
+            // 4. DISM StartComponentCleanup (Limpeza da WinSxS)
+            AnsiConsole.Status().Start("Executando [cyan]Limpeza de Componentes[/] (WinSxS)...", ctx => 
+            {
+                ctx.Status("Removendo arquivos de atualizações antigas para liberar espaço...");
+                ExecutarComandoSimples("dism /online /cleanup-image /startcomponentcleanup");
+                AnsiConsole.MarkupLine("[[[green]OK[/]]] Limpeza da pasta WinSideBySide concluída com sucesso!");
+            });
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold green]Processo de manutenção do sistema finalizado![/]");
+        }
+
     }
 }

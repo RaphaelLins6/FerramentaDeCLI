@@ -82,15 +82,36 @@ while (emExecucao)
         case "Otimizações de Sistema":
             var opt = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[yellow]Selecione a otimização:[/]")
+                    .Title("[yellow]Selecione a ferramenta de otimização:[/]")
                     .AddChoices(new[] { 
+                        "Limpeza de Disco e Temporários",
+                        "Gerenciamento e Reparo do Sistema (SFC/DISM)",
                         "Ativar Desempenho Máximo", 
                         "Ativar Windows/Office (Massgrave)", 
                         "Voltar" 
                     }));
 
-            if (opt == "Ativar Desempenho Máximo") automationService.AtivarDesempenhoMaximo();
-            if (opt == "Ativar Windows/Office (Massgrave)") automationService.AbrirMassgrave();
+            switch(opt)
+            {
+                case "Limpeza de Disco e Temporários":
+                    automationService.LimparArquivosTemporarios();
+                    break;
+                case "Gerenciamento e Reparo do Sistema (SFC/DISM)":
+                    automationService.RepararSistema();
+                    break;
+                case "Ativar Desempenho Máximo":
+                    automationService.AtivarDesempenhoMaximo();
+                    break;
+                case "Ativar Windows/Office (Massgrave)":
+                    automationService.AbrirMassgrave();
+                    break;
+            }
+            
+            if (opt != "Voltar")
+            {
+                AnsiConsole.MarkupLine("\n[grey]Operação concluída. Pressione qualquer tecla...[/]");
+                Console.ReadKey();
+            }
             break;
 
         case "Sair":
