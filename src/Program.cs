@@ -9,9 +9,11 @@ while (emExecucao)
 {
     AnsiConsole.Clear();
     AnsiConsole.Write(new FigletText("Ferramenta de Manutenção").Centered().Color(new Color(255, 135, 0)));
+    AnsiConsole.MarkupLine("[grey]Desenvolvido por [white]Raphael Lins \u00ae[/] - 2026[/]");
+    AnsiConsole.WriteLine();
 
     // Menu de Seleção
-    var opcao = AnsiConsole.Prompt(
+    var opcao = AnsiConsole.Prompt(   
         new SelectionPrompt<string>()
             .Title("[yellow]O que deseja fazer hoje?[/]")
             .PageSize(10)
@@ -23,6 +25,8 @@ while (emExecucao)
                 "Sair"
             }));
 
+    AnsiConsole.MarkupLine("\n[grey]Copyright \u00ae Raphael Lins. Todos os direitos reservados.[/]");
+    
     switch (opcao)
     {
         case "Ver Informações do Hardware":
