@@ -84,22 +84,22 @@ while (emExecucao)
                 new SelectionPrompt<string>()
                     .Title("[yellow]Selecione a ferramenta de otimização:[/]")
                     .AddChoices(new[] { 
-                        "Limpeza de Disco e Temporários",
+                        "Limpeza de Disco e Arquivos Temporários",
                         "Gerenciamento e Reparo do Sistema (SFC/DISM)",
-                        "Ativar Desempenho Máximo", 
+                        "Ativar Desempenho Máximo (Plano de Energia)", 
                         "Ativar Windows/Office (Massgrave)", 
                         "Voltar" 
                     }));
 
             switch(opt)
             {
-                case "Limpeza de Disco e Temporários":
+                case "Limpeza de Disco e Arquivos Temporários":
                     automationService.LimparArquivosTemporarios();
                     break;
                 case "Gerenciamento e Reparo do Sistema (SFC/DISM)":
                     automationService.RepararSistema();
                     break;
-                case "Ativar Desempenho Máximo":
+                case "Ativar Desempenho Máximo (Plano de Energia)":
                     automationService.AtivarDesempenhoMaximo();
                     break;
                 case "Ativar Windows/Office (Massgrave)":
