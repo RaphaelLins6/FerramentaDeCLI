@@ -27,18 +27,34 @@ namespace ToolManutencao.Services
                 table.AddRow("Processador", obj["Name"]?.ToString() ?? "N/A");
             }
 
-            // 3. Memória RAM
-            using var searcherComputer = new ManagementObjectSearcher("Select TotalPhysicalMemory From Win32_ComputerSystem");
-            foreach (ManagementObject obj in searcherComputer.Get())
+            // 3. Memória RAM e Tipo DDR
+            using var searcherRAM = new ManagementObjectSearcher("Select Capacity, Speed, MemoryType, SMBIOSMemoryType From Win32_PhysicalMemory");
+            string ddrTipo = "RAM";
+            double totalCapacity = 0;
+
+            foreach (ManagementObject obj in searcherRAM.Get())
             {
-                double rawBytes = Convert.ToDouble(obj["TotalPhysicalMemory"]);
-                double ramGb = rawBytes / (1024.0 * 1024.0 * 1024.0);
+                totalCapacity += Convert.ToDouble(obj["Capacity"]);
                 
-                // Arredonda para cima para pegar o valor comercial (ex: 15.87 -> 16)
-                double ramComercial = Math.Ceiling(ramGb);
-                
-                table.AddRow("Memória RAM", $"{ramComercial} GB");
+                // O SMBIOSMemoryType é o padrão mais moderno para detectar DDR4/DDR5
+                uint typeCode = Enumerable.Range(0, 1).Select(_ => {
+                    var t = obj["SMBIOSMemoryType"];
+                    return t != null ? Convert.ToUInt32(t) : 0;
+                }).First();
+
+                ddrTipo = typeCode switch
+                {
+                    20 => "DDR",
+                    21 => "DDR2",
+                    24 => "DDR3",
+                    26 => "DDR4",
+                    34 => "DDR5",
+                    _ => "DDR" 
+                };
             }
+
+            double ramGb = totalCapacity / (1024.0 * 1024.0 * 1024.0);
+            table.AddRow("Memória RAM", $"{Math.Ceiling(ramGb)} GB {ddrTipo}");
 
             // 4. Armazenamento (HDD, SSD, NVMe)
             using var searcherDisk = new ManagementObjectSearcher("Select Model, Size From Win32_DiskDrive");

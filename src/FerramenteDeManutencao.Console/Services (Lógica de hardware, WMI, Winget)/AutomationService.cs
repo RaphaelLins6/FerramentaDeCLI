@@ -33,7 +33,10 @@ namespace ToolManutencao.Services
             { "WinRAR", "RARLab.WinRAR" },
 
             // Runtime
-            { "Java Runtime Environment", "Oracle.JavaRuntimeEnvironment" }
+            { "Java Runtime Environment", "Oracle.JavaRuntimeEnvironment" },
+
+            // Office
+            { "Microsoft Office 365", "Microsoft.Office" }
         };
 
         public void InstalarSoftwares()
