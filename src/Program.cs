@@ -8,7 +8,7 @@ bool emExecucao = true;
 while (emExecucao)
 {
     AnsiConsole.Clear();
-    AnsiConsole.Write(new FigletText("Ferramenta de Manutenção").Centered().Color(new Color(255, 135, 0)));
+    AnsiConsole.Write(new FigletText("Ferramenta de Manutenção de TI").Centered().Color(new Color(255, 135, 0)));
     AnsiConsole.MarkupLine("[grey]Desenvolvido por [white]Raphael Lins \u00ae[/] - 2026[/]");    
     AnsiConsole.WriteLine();
 

@@ -31,21 +31,41 @@ namespace ToolManutencao.Services
             using var searcherComputer = new ManagementObjectSearcher("Select TotalPhysicalMemory From Win32_ComputerSystem");
             foreach (ManagementObject obj in searcherComputer.Get())
             {
-                double ramGb = Convert.ToDouble(obj["TotalPhysicalMemory"]) / (1024 * 1024 * 1024);
-                table.AddRow("Memória RAM", $"{Math.Round(ramGb, 2)} GB");
+                double rawBytes = Convert.ToDouble(obj["TotalPhysicalMemory"]);
+                double ramGb = rawBytes / (1024.0 * 1024.0 * 1024.0);
+                
+                // Arredonda para cima para pegar o valor comercial (ex: 15.87 -> 16)
+                double ramComercial = Math.Ceiling(ramGb);
+                
+                table.AddRow("Memória RAM", $"{ramComercial} GB");
             }
 
             // 4. Armazenamento (HDD, SSD, NVMe)
             using var searcherDisk = new ManagementObjectSearcher("Select Model, Size From Win32_DiskDrive");
             foreach (ManagementObject obj in searcherDisk.Get())
             {
-                // O tamanho vem em Bytes, vamos converter para GB para ficar legível
                 ulong bytes = (ulong)(obj["Size"] ?? 0);
                 double sizeGb = bytes / (1024.0 * 1024.0 * 1024.0);
-                
                 string modelo = obj["Model"]?.ToString() ?? "Desconhecido";
-                
-                table.AddRow("Disco", $"{modelo} ({Math.Round(sizeGb, 0)} GB)");
+
+                // Lógica para detectar o tipo pelo nome do modelo
+                string tipo = "HDD"; // Padrão
+                string modeloUpper = modelo.ToUpper();
+
+                if (modeloUpper.Contains("SSD") || modeloUpper.Contains("NVME") || modeloUpper.Contains("SATA") && sizeGb < 600) 
+                    tipo = "SSD";
+                if (modeloUpper.Contains("NVME")) 
+                    tipo = "NVMe";
+
+                // Sua lógica de tamanho comercial (mantida)
+                string tamanhoComercial;
+                if (sizeGb > 900) tamanhoComercial = "1 TB";
+                else if (sizeGb > 440 && sizeGb < 500) tamanhoComercial = "480 GB";
+                else if (sizeGb > 220 && sizeGb < 250) tamanhoComercial = "240 GB";
+                else tamanhoComercial = $"{Math.Round(sizeGb, 0)} GB";
+
+                // Adiciona na tabela com o tipo entre parênteses
+                table.AddRow("Disco", $"{modelo} ({tipo}) - {tamanhoComercial}");
             }
 
             return table;

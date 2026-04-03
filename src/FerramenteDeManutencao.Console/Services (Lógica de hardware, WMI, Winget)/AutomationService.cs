@@ -41,32 +41,53 @@ namespace ToolManutencao.Services
             AnsiConsole.Clear();
             AnsiConsole.Write(new Rule("[yellow]Instalação Automatizada[/]").RuleStyle("grey").Justify(Justify.Left));
 
-            var opcoesMenu = new List<string> { "[red]<- Voltar ao Menu Anterior[/]" };
+            // 1. Criamos a lista de opções com "Voltar" e agora "Instalar Todos"
+            var opcoesMenu = new List<string> 
+            { 
+                "[red]<- Voltar ao Menu Anterior[/]",
+                "[cyan]▲ INSTALAR TUDO DA LISTA[/]"
+            };
             opcoesMenu.AddRange(_programasDisponiveis.Keys);
 
             var selecionados = AnsiConsole.Prompt(
                 new MultiSelectionPrompt<string>()
                     .Title("Selecione os programas que deseja [green]instalar[/]")
                     .NotRequired()
-                    .PageSize(12)
+                    .PageSize(15)
                     .InstructionsText("[grey]([blue]<espaço>[/] p/ selecionar, [green]<enter>[/] p/ confirmar)[/]")
                     .AddChoices(opcoesMenu)
                     );
 
-            // SELECIONOU "VOLTAR" OU NADA? SAI DIRETO SEM MENSAGEM.
+            // 2. Verificação de Saída
             if (selecionados.Contains("[red]<- Voltar ao Menu Anterior[/]") || selecionados.Count == 0)
             {
                 return; 
             }
 
-            // Só chega aqui se realmente for instalar algo
-            foreach (var nome in selecionados)
+            // 3. Lógica para "Instalar Tudo"
+            IEnumerable<string> listaParaInstalar;
+
+            if (selecionados.Contains("[cyan]▲ INSTALAR TUDO DA LISTA[/]"))
             {
-                string id = _programasDisponiveis[nome];
-                ExecutarInstalacaoWinget(nome, id);
+                // Se escolheu "Tudo", pegamos todas as chaves do dicionário
+                listaParaInstalar = _programasDisponiveis.Keys;
+                AnsiConsole.MarkupLine("[yellow]Modo 'Instalar Tudo' ativado![/]\n");
+            }
+            else
+            {
+                // Caso contrário, usa apenas o que foi marcado (removendo o separador se ele foi "marcado")
+                listaParaInstalar = selecionados.Where(s => s != "--------------------------");
             }
 
-            // Apenas após a instalação mostramos o aviso para o técnico ver o que aconteceu
+            // 4. Loop de Instalação
+            foreach (var nome in listaParaInstalar)
+            {
+                if (_programasDisponiveis.TryGetValue(nome, out string id))
+                {
+                    ExecutarInstalacaoWinget(nome, id);
+                }
+            }
+
             AnsiConsole.MarkupLine("\n[green]Processo de instalação finalizado![/]");
             AnsiConsole.MarkupLine("[grey]Pressione qualquer tecla para retornar ao menu principal...[/]");
             Console.ReadKey();
