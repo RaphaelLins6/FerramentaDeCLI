@@ -289,5 +289,56 @@ namespace ToolManutencao.Services
             AnsiConsole.MarkupLine("[bold green]Processo de manutenção do sistema finalizado![/]");
         }
 
+        public void DiagnosticoRede()
+        {
+            AnsiConsole.Clear();
+            AnsiConsole.Write(new Rule("[blue]Diagnóstico de Rede[/]").RuleStyle("grey").Justify(Justify.Left));
+
+            var comando = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Selecione o teste de rede:")
+                    .AddChoices(new[] {
+                        "Teste de Latência (Ping 8.8.8.8)",
+                        "Rastrear Rota (Tracert)",
+                        "Teste de Gateway Local (Ping Roteador)",
+                        "Verificar DNS (NSLookup)",
+                        "Informações de Interface (IPConfig)",
+                        "Voltar"
+                    }));
+
+            if (comando == "Voltar") return;
+
+            string cmdExecutar = comando switch
+            {
+                "Teste de Latência (Ping 8.8.8.8)" => "ping 8.8.8.8 -n 10",
+                "Rastrear Rota (Tracert)" => "tracert 8.8.8.8",
+                "Teste de Gateway Local (Ping Roteador)" => "ping 192.168.1.1 -n 20", // Ajuste o IP se necessário
+                "Verificar DNS (NSLookup)" => "nslookup google.com",
+                "Informações de Interface (IPConfig)" => "ipconfig /all",
+                _ => ""
+            };
+
+            AnsiConsole.MarkupLine($"\n[yellow]Executando:[/] [white]{cmdExecutar}[/]\n");
+            
+            // Usamos um método que mantém a janela aberta para ler o resultado
+            ExecutarComandoInterativo(cmdExecutar);
+
+            AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar ao menu de redes...[/]");
+            Console.ReadKey();
+            DiagnosticoRede(); // Loop para continuar no menu de redes
+        }
+
+        private void ExecutarComandoInterativo(string comando)
+        {
+            ProcessStartInfo psi = new()
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c {comando}",
+                UseShellExecute = false,
+                CreateNoWindow = false // Deixamos aparecer para o técnico ver o output real
+            };
+            Process.Start(psi)?.WaitForExit();
+        }
+
     }
 }

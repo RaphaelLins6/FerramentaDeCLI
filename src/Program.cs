@@ -22,6 +22,7 @@ while (emExecucao)
                 "Instalar Softwares Básicos",
                 "Testes de Hardware",
                 "Otimizações de Sistema",
+                "Ferramentas de Rede",
                 "Sair"
             }));
 
@@ -112,6 +113,10 @@ while (emExecucao)
                 AnsiConsole.MarkupLine("\n[grey]Operação concluída. Pressione qualquer tecla...[/]");
                 Console.ReadKey();
             }
+            break;
+
+        case "Ferramentas de Rede":
+            automationService.DiagnosticoRede();
             break;
 
         case "Sair":
