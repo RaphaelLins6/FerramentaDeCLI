@@ -1,18 +1,34 @@
 using System.Management;
 using System.Runtime.Versioning;
 using Spectre.Console;
+using System.Runtime.InteropServices;
 
 namespace ToolManutencao.Services
 {
     [SupportedOSPlatform("windows")]
     public class HardwareService
     {
+        private readonly bool _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         public Table GetHardwareTable()
         {
             var table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("[bold blue]Componente[/]");
             table.AddColumn("[bold blue]Detalhes[/]");
 
+            if (_isWindows)
+            {
+                ObterDadosWindows(table);
+            }
+            else
+            {
+                ObterDadosLinux(table);
+            }
+
+            return table;
+        }
+
+        private void ObterDadosWindows(Table table)
+        {
             // 1. SO
             using var searcherOS = new ManagementObjectSearcher("Select Caption From Win32_OperatingSystem");
             foreach (ManagementObject obj in searcherOS.Get())
@@ -83,12 +99,59 @@ namespace ToolManutencao.Services
                 // Adiciona na tabela com o tipo entre parênteses
                 table.AddRow("Disco", $"{modelo} ({tipo}) - {tamanhoComercial}");
             }
+        }
 
-            return table;
+        private void ObterDadosLinux(Table table)
+        {
+            // 1. SO
+            if (File.Exists("/etc/os-release"))
+            {
+                var osInfo = File.ReadAllLines("/etc/os-release")
+                    .FirstOrDefault(l => l.StartsWith("PRETTY_NAME="))?
+                    .Replace("PRETTY_NAME=", "").Replace("\"", "");
+                table.AddRow("SO", osInfo ?? "Linux");
+            }
+
+            // 2. Processador
+            if (File.Exists("/proc/cpuinfo"))
+            {
+                var cpuLine = File.ReadAllLines("/proc/cpuinfo")
+                    .FirstOrDefault(l => l.StartsWith("model name"))?
+                    .Split(':').Last().Trim();
+                table.AddRow("Processador", cpuLine ?? "N/A");
+            }
+
+            // 3. Memória RAM
+            if (File.Exists("/proc/meminfo"))
+            {
+                var memLine = File.ReadAllLines("/proc/meminfo")
+                    .FirstOrDefault(l => l.StartsWith("MemTotal"));
+                if (memLine != null)
+                {
+                    var totalKb = double.Parse(System.Text.RegularExpressions.Regex.Match(memLine, @"\d+").Value);
+                    var totalGb = Math.Ceiling(totalKb / (1024 * 1024));
+                    table.AddRow("Memória RAM", $"{totalGb} GB");
+                }
+            }
+
+            // 4. Discos
+            var drives = DriveInfo.GetDrives().Where(d => d.IsReady);
+            foreach (var drive in drives)
+            {
+                double totalSize = drive.TotalSize / (1024.0 * 1024.0 * 1024.0);
+                table.AddRow("Disco (Montado)", $"{drive.Name} - {Math.Round(totalSize, 0)} GB");
+            }
         }
 
         public void ExibirSaudeDiscos()
         {
+            if (!_isWindows)
+            {
+                AnsiConsole.MarkupLine("[red]Teste S.M.A.R.T via WMI só está disponível no Windows.[/]");
+                AnsiConsole.MarkupLine("[grey]No Linux, instale o 'smartmontools' e use 'sudo smartctl -a /dev/sda'.[/]");
+                return;
+            }
+            
             AnsiConsole.Clear();
             AnsiConsole.Write(new Rule("[yellow]Teste de Integridade de Disco (S.M.A.R.T)[/]").RuleStyle("grey").Justify(Justify.Left));
 

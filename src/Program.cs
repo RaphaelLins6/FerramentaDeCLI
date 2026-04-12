@@ -1,33 +1,43 @@
 using Spectre.Console;
 using ToolManutencao.Services;
+using System.Runtime.InteropServices; // Necessário para detectar o SO
 
 var hardwareService = new HardwareService();
 var automationService = new AutomationService();
 bool emExecucao = true;
 
+// Detecta o sistema uma vez para usar no menu
+bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
 while (emExecucao)
 {
     AnsiConsole.Clear();
-    AnsiConsole.Write(new FigletText("Ferramenta de Manutenção de TI").Centered().Color(new Color(255, 135, 0)));
-    AnsiConsole.MarkupLine("[grey]Desenvolvido por [white]Raphael Lins \u00ae[/] - 2026[/]");    
+    AnsiConsole.Write(new FigletText("Ferramenta de Manutenção").Centered().Color(Color.Orange1));
+    
+    // Mostra o SO atual no cabeçalho
+    string soNome = isWindows ? "Windows" : "Linux";
+    AnsiConsole.MarkupLine($"[grey]Sistema Detectado:[/] [blue]{soNome}[/] | [grey]Desenvolvido por Raphael Lins[/]");
     AnsiConsole.WriteLine();
 
-    // Menu de Seleção
-    var opcao = AnsiConsole.Prompt(   
-        new SelectionPrompt<string>()
+    var menuPrincipal = new SelectionPrompt<string>()
             .Title("[yellow]O que deseja fazer hoje?[/]")
-            .PageSize(10)
-            .AddChoices(new[] {
-                "Ver Informações do Hardware",
-                "Instalar Softwares Básicos",
-                "Testes de Hardware",
-                "Otimizações de Sistema",
-                "Ferramentas de Rede",
-                "Sair"
-            }));
+            .PageSize(10);
 
-    AnsiConsole.MarkupLine("\n[grey]Copyright \u00ae Raphael Lins. Todos os direitos reservados.[/]");    
-    
+    // Adiciona opções básicas
+    menuPrincipal.AddChoices("Ver Informações do Hardware", "Ferramentas de Rede");
+
+    // Adiciona opções específicas de Windows
+    if (isWindows) {
+        menuPrincipal.AddChoices("Instalar Softwares Básicos", "Testes de Hardware", "Otimizações de Sistema");
+    } else {
+        // No Linux, você pode adicionar opções futuras específicas como "Limpeza via APT"
+        menuPrincipal.AddChoices("Limpeza de Sistema (Linux)");
+    }
+
+    menuPrincipal.AddChoices("Sair");
+
+    var opcao = AnsiConsole.Prompt(menuPrincipal);
+
     switch (opcao)
     {
         case "Ver Informações do Hardware":
@@ -35,92 +45,39 @@ while (emExecucao)
                 var table = hardwareService.GetHardwareTable();
                 AnsiConsole.Write(table);
             });
-            AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar ao menu...[/]");
-            Console.ReadKey();
-            break;
-
-        case "Instalar Softwares Básicos":
-            automationService.InstalarSoftwares();
-            break;
-        
-        case "Testes de Hardware":
-            bool emSubMenu = true;
-            while (emSubMenu)
-            {
-                AnsiConsole.Clear();
-                AnsiConsole.Write(new FigletText("Testes").Justify(Justify.Left).Color(Color.Orange1));
-
-                var testeOpcao = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                        .Title("[yellow]Selecione o teste desejado:[/]")
-                        .AddChoices(new[] {
-                            "Verificar Saúde dos Discos (S.M.A.R.T)",
-                            "Teste de Estresse de CPU/RAM (Em breve)",
-                            "Voltar ao Menu Principal"
-                        }));
-
-                switch (testeOpcao)
-                {
-                    case "Verificar Saúde dos Discos (S.M.A.R.T)":
-                        // Chamando a sua nova função
-                        hardwareService.ExibirSaudeDiscos(); 
-                        AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
-                        Console.ReadKey();
-                        break;
-
-                    case "Teste de Estresse de CPU/RAM (Em breve)":
-                        AnsiConsole.MarkupLine("[blue]Esta função será implementada no próximo módulo![/]");
-                        Console.ReadKey();
-                        break;
-
-                    case "Voltar ao Menu Principal":
-                        emSubMenu = false;
-                        break;
-                }
-            }
             break;
 
         case "Otimizações de Sistema":
-            var opt = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[yellow]Selecione a ferramenta de otimização:[/]")
-                    .AddChoices(new[] { 
-                        "Limpeza de Disco e Arquivos Temporários",
-                        "Gerenciamento e Reparo do Sistema (SFC/DISM)",
-                        "Ativar Desempenho Máximo (Plano de Energia)", 
-                        "Ativar Windows/Office (Massgrave)", 
-                        "Voltar" 
-                    }));
-
-            switch(opt)
-            {
-                case "Limpeza de Disco e Arquivos Temporários":
-                    automationService.LimparArquivosTemporarios();
-                    break;
-                case "Gerenciamento e Reparo do Sistema (SFC/DISM)":
-                    automationService.RepararSistema();
-                    break;
-                case "Ativar Desempenho Máximo (Plano de Energia)":
-                    automationService.AtivarDesempenhoMaximo();
-                    break;
-                case "Ativar Windows/Office (Massgrave)":
-                    automationService.AbrirMassgrave();
-                    break;
-            }
-            
-            if (opt != "Voltar")
-            {
-                AnsiConsole.MarkupLine("\n[grey]Operação concluída. Pressione qualquer tecla...[/]");
-                Console.ReadKey();
-            }
+            if (isWindows) MenuOtimizacaoWindows(automationService);
             break;
 
         case "Ferramentas de Rede":
-            automationService.DiagnosticoRede();
+            automationService.DiagnosticoRede(); // Este método precisa ser ajustado no Service
+            break;
+
+        case "Limpeza de Sistema (Linux)":
+            automationService.LimparArquivosTemporarios();
             break;
 
         case "Sair":
             emExecucao = false;
             break;
     }
+
+    if (opcao != "Sair") {
+        AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
+        Console.ReadKey();
+    }
+}
+
+// Submenu isolado para não poluir o loop principal
+void MenuOtimizacaoWindows(AutomationService service) {
+    var opt = AnsiConsole.Prompt(
+        new SelectionPrompt<string>()
+            .Title("[yellow]Otimizações (Exclusivo Windows):[/]")
+            .AddChoices("Limpeza de Disco", "Reparo (SFC/DISM)", "Ativar Massgrave", "Voltar"));
+
+    if (opt == "Limpeza de Disco") service.LimparArquivosTemporarios();
+    if (opt == "Reparo (SFC/DISM)") service.RepararSistema();
+    if (opt == "Ativar Massgrave") service.AbrirMassgrave();
 }

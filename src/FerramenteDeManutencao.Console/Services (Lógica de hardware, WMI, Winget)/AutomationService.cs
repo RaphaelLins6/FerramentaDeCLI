@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Spectre.Console;
+using System.Runtime.InteropServices;
 
 namespace ToolManutencao.Services
 {
@@ -39,8 +40,17 @@ namespace ToolManutencao.Services
             { "Microsoft Office 365", "Microsoft.Office" }
         };
 
+        private readonly bool _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
         public void InstalarSoftwares()
         {
+            if (!_isWindows)
+            {
+                AnsiConsole.MarkupLine("[red]A instalação via Winget só está disponível no Windows.[/]");
+                AnsiConsole.MarkupLine("[yellow]Dica: No Linux, use o gerenciador de pacotes do seu sistema (apt, dnf, pacman).[/]");
+                return;
+            }
+            
             AnsiConsole.Clear();
             AnsiConsole.Write(new Rule("[yellow]Instalação Automatizada[/]").RuleStyle("grey").Justify(Justify.Left));
 
@@ -132,6 +142,7 @@ namespace ToolManutencao.Services
 
         public void AtivarDesempenhoMaximo()
         {
+            if (_isWindows) {
             AnsiConsole.Status().Start("Ativando Plano de Desempenho Máximo...", ctx =>
             {
                 // Comando oficial do Windows para liberar o plano oculto
@@ -143,10 +154,12 @@ namespace ToolManutencao.Services
                 
                 AnsiConsole.MarkupLine("[[[green]OK[/]]] Plano de [bold]Desempenho Máximo[/] ativado!");
             });
+            }
         }
 
         public void AbrirMassgrave()
         {
+            if (_isWindows) {
             AnsiConsole.MarkupLine("[yellow]Abrindo Massgrave (MAS)...[/]");
             // O MAS roda via um comando PowerShell direto da web
             string comandoPs = "irm https://get.activated.win | iex";
@@ -160,98 +173,108 @@ namespace ToolManutencao.Services
             };
 
             Process.Start(psi);
+            }
         }
 
         // Método auxiliar para comandos que não precisam de janela
         private void ExecutarComandoSimples(string comando)
         {
+            string shell = _isWindows ? "cmd.exe" : "/bin/bash";
+            string args = _isWindows ? $"/c {comando}" : $"-c \"{comando}\"";
+
             ProcessStartInfo psi = new()
             {
-                FileName = "cmd.exe",
-                Arguments = $"/c {comando}",
+                FileName = shell,
+                Arguments = args,
                 CreateNoWindow = true,
                 UseShellExecute = false
             };
-            Process.Start(psi)?.WaitForExit();
+
+            try 
+            {
+                using var processo = Process.Start(psi);
+                processo?.WaitForExit();
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Erro ao executar comando:[/] {ex.Message}");
+            }
         }
 
         public void LimparArquivosTemporarios()
         {
-            // 1. Obter discos prontos e adicionar opção global
-            var drives = DriveInfo.GetDrives()
-                .Where(d => d.IsReady)
-                .Select(d => d.Name)
-                .ToList();
-            
-            drives.Add("Limpar Todos");
+            if (_isWindows)
+            {
+                // 1. Obter discos prontos e adicionar opção global
+                var drives = DriveInfo.GetDrives()
+                    .Where(d => d.IsReady)
+                    .Select(d => d.Name)
+                    .ToList();
+                
+                drives.Add("Limpar Todos");
 
-            // Menu de seleção estilizado
-            var escolha = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[yellow]Qual disco deseja limpar com o Cleanmgr?[/]")
-                    .PageSize(10)
-                    .MoreChoicesText("[grey](Mova para cima e para baixo para selecionar)[/]")
-                    .AddChoices(drives));
+                var escolha = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[yellow]Qual disco deseja limpar com o Cleanmgr?[/]")
+                        .PageSize(10)
+                        .AddChoices(drives));
 
-            AnsiConsole.Status()
-                .Spinner(Spinner.Known.Dots)
-                .Start("Limpando arquivos temporários...", ctx =>
-                {
-                    // --- PARTE 1: Limpeza Manual de Pastas Críticas ---
-                    string[] pastas = {
-                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch"),
-                        Path.GetTempPath(), // %temp% do usuário
-                        @"C:\Windows\Temp"  // temp do sistema
-                    };
-
-                    foreach (var pasta in pastas)
+                AnsiConsole.Status()
+                    .Spinner(Spinner.Known.Dots)
+                    .Start("Limpando arquivos temporários...", ctx =>
                     {
-                        try
+                        // --- PARTE 1: Limpeza Manual ---
+                        string[] pastas = {
+                            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch"),
+                            Path.GetTempPath(),
+                            @"C:\Windows\Temp"
+                        };
+
+                        foreach (var pasta in pastas)
                         {
-                            ctx.Status($"Acessando: {pasta}");
-                            DirectoryInfo di = new DirectoryInfo(pasta);
-
-                            // Deletar arquivos
-                            foreach (FileInfo file in di.GetFiles())
+                            try
                             {
-                                try { file.Delete(); } catch { /* Arquivo em uso, ignorar */ }
+                                ctx.Status($"Acessando: {pasta}");
+                                DirectoryInfo di = new DirectoryInfo(pasta);
+                                foreach (FileInfo file in di.GetFiles()) { try { file.Delete(); } catch { } }
+                                foreach (DirectoryInfo dir in di.GetDirectories()) { try { dir.Delete(true); } catch { } }
                             }
-
-                            // Deletar subpastas
-                            foreach (DirectoryInfo dir in di.GetDirectories())
-                            {
-                                try { dir.Delete(true); } catch { /* Pasta em uso, ignorar */ }
-                            }
+                            catch { /* Silencioso se não houver permissão */ }
                         }
-                        catch (Exception) 
-                        { 
-                            AnsiConsole.MarkupLine($"[grey]Aviso: Sem permissão total para acessar {pasta}[/]"); 
+
+                        // --- PARTE 2: Cleanmgr ---
+                        ctx.Status("[bold blue]Iniciando Cleanmgr...[/]");
+                        if (escolha == "Limpar Todos")
+                        {
+                            ExecutarComandoSimples("cleanmgr /autoclean");
                         }
-                    }
+                        else
+                        {
+                            string driveLetra = escolha.Substring(0, 2);
+                            ExecutarComandoSimples($"cleanmgr /d {driveLetra} /sagerun:1");
+                        }
 
-                    // --- PARTE 2: Execução do Cleanmgr conforme escolha ---
-                    ctx.Status("[bold blue]Iniciando Cleanmgr...[/]");
-
-                    if (escolha == "Limpar Todos")
-                    {
-                        // O parâmetro /autoclean executa a limpeza padrão em todos os discos
-                        ExecutarComandoSimples("cleanmgr /autoclean");
-                    }
-                    else
-                    {
-                        // Extrai a letra do drive (ex: "C:")
-                        string driveLetra = escolha.Substring(0, 2);
-                        // /sagerun:1 usa configurações pré-definidas (pode exigir /sageset anterior)
-                        // Se preferir a limpeza padrão do drive, pode usar apenas cleanmgr /d {driveLetra}
-                        ExecutarComandoSimples($"cleanmgr /d {driveLetra} /sagerun:1");
-                    }
-
-                    AnsiConsole.MarkupLine("[[[green]OK[/]]] Limpeza de arquivos temporários concluída!");
+                        AnsiConsole.MarkupLine("[[[green]OK[/]]] Limpeza do Windows concluída!");
+                    });
+            }
+            else
+            {
+                // Lógica para Linux
+                AnsiConsole.Status().Start("Limpando temporários do Linux...", ctx => {
+                    ctx.Status("Removendo arquivos de /tmp...");
+                    ExecutarComandoSimples("sudo rm -rf /tmp/*");
+                    
+                    ctx.Status("Limpando cache do gerenciador de pacotes...");
+                    ExecutarComandoSimples("sudo apt-get clean -y"); 
+                    
+                    AnsiConsole.MarkupLine("[[[green]OK[/]]] Cache e /tmp limpos no Linux.");
                 });
+            }
         }
 
         public void RepararSistema()
         {
+            if (_isWindows) {
             AnsiConsole.MarkupLine("[bold yellow]Iniciando Reparo do Sistema e Limpeza de Componentes...[/]");
             AnsiConsole.MarkupLine("[grey]Este processo é profundo e pode demorar alguns minutos. Não feche o terminal.[/]");
             AnsiConsole.WriteLine();
@@ -287,6 +310,7 @@ namespace ToolManutencao.Services
 
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine("[bold green]Processo de manutenção do sistema finalizado![/]");
+            }
         }
 
         public void DiagnosticoRede()
@@ -294,15 +318,17 @@ namespace ToolManutencao.Services
             AnsiConsole.Clear();
             AnsiConsole.Write(new Rule("[blue]Diagnóstico de Rede[/]").RuleStyle("grey").Justify(Justify.Left));
 
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
             var comando = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("Selecione o teste de rede:")
                     .AddChoices(new[] {
                         "Teste de Latência (Ping 8.8.8.8)",
-                        "Rastrear Rota (Tracert)",
+                        "Rastrear Rota (Tracert/Traceroute)",
                         "Teste de Gateway Local (Ping Roteador)",
                         "Verificar DNS (NSLookup)",
-                        "Informações de Interface (IPConfig)",
+                        "Informações de Interface (IPConfig/IP A)",
                         "Voltar"
                     }));
 
@@ -310,32 +336,46 @@ namespace ToolManutencao.Services
 
             string cmdExecutar = comando switch
             {
-                "Teste de Latência (Ping 8.8.8.8)" => "ping 8.8.8.8 -n 10",
-                "Rastrear Rota (Tracert)" => "tracert 8.8.8.8",
-                "Teste de Gateway Local (Ping Roteador)" => "ping 192.168.1.1 -n 20", // Ajuste o IP se necessário
-                "Verificar DNS (NSLookup)" => "nslookup google.com",
-                "Informações de Interface (IPConfig)" => "ipconfig /all",
+                "Teste de Latência (Ping 8.8.8.8)" => 
+                    isWindows ? "ping 8.8.8.8 -n 10" : "ping 8.8.8.8 -c 10",
+
+                "Rastrear Rota (Tracert/Traceroute)" => 
+                    isWindows ? "tracert 8.8.8.8" : "traceroute 8.8.8.8",
+
+                "Teste de Gateway Local (Ping Roteador)" => 
+                    isWindows ? "ping 192.168.1.1 -n 10" : "ping 192.168.1.1 -c 10",
+
+                "Verificar DNS (NSLookup)" => 
+                    "nslookup google.com", // O comando nslookup costuma ser universal
+
+                "Informações de Interface (IPConfig/IP A)" => 
+                    isWindows ? "ipconfig /all" : "ip a",
+
                 _ => ""
             };
 
             AnsiConsole.MarkupLine($"\n[yellow]Executando:[/] [white]{cmdExecutar}[/]\n");
             
-            // Usamos um método que mantém a janela aberta para ler o resultado
+            // Executa o comando de forma interativa conforme sua infraestrutura
             ExecutarComandoInterativo(cmdExecutar);
 
             AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar ao menu de redes...[/]");
             Console.ReadKey();
-            DiagnosticoRede(); // Loop para continuar no menu de redes
+            DiagnosticoRede(); 
         }
 
         private void ExecutarComandoInterativo(string comando)
         {
+            // Define qual "casca" usar: CMD no Windows ou Bash no Linux
+            string shell = _isWindows ? "cmd.exe" : "/bin/bash";
+            string args = _isWindows ? $"/c {comando}" : $"-c \"{comando}\"";
+
             ProcessStartInfo psi = new()
             {
-                FileName = "cmd.exe",
-                Arguments = $"/c {comando}",
+                FileName = shell,
+                Arguments = args,
                 UseShellExecute = false,
-                CreateNoWindow = false // Deixamos aparecer para o técnico ver o output real
+                CreateNoWindow = false 
             };
             Process.Start(psi)?.WaitForExit();
         }
