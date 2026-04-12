@@ -134,12 +134,25 @@ namespace ToolManutencao.Services
                 }
             }
 
-            // 4. Discos
+            // 4. Discos no Linux
             var drives = DriveInfo.GetDrives().Where(d => d.IsReady);
             foreach (var drive in drives)
             {
-                double totalSize = drive.TotalSize / (1024.0 * 1024.0 * 1024.0);
-                table.AddRow("Disco (Montado)", $"{drive.Name} - {Math.Round(totalSize, 0)} GB");
+                try 
+                {
+                    double totalSize = drive.TotalSize / (1024.0 * 1024.0 * 1024.0);
+                    table.AddRow("Disco (Montado)", $"{drive.Name} - {Math.Round(totalSize, 0)} GB");
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Ignora discos que o usuário atual não tem permissão para ler o tamanho
+                    continue; 
+                }
+                catch (IOException)
+                {
+                    // Ignora erros de operação não permitida (comum em sistemas de arquivos virtuais)
+                    continue;
+                }
             }
         }
 
