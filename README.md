@@ -3,6 +3,8 @@
 ## 📝 Descrição
 Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação de diagnósticos de hardware e instalação de softwares essenciais (setup) em novas máquinas.
 
+![Screenshot do Menu Principal](Assets/TelaDaFerramenta.png)
+
 ---
 
 ## ✨ Funcionalidades Principais
