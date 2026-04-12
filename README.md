@@ -47,15 +47,22 @@ ToolManutencao/
 
 ## 🚀 Como Compilar e Rodar
 1 - Certifique-se de ter o SDK do .NET instalado.
+
 2 - Abra o terminal na pasta raiz do projeto.
+
 3 - Para rodar diretamente:
 
 ```
 dotnet run --project src/FerramentaDeManutencao.Console
 ```
 
-4 - Para gerar o executável final:
+4 - Para gerar o executável final para o Windows:
 
 ```
 dotnet publish -c Release -r win-x64 --self-contained
+```
+
+5 - Para gerar o executável final para o Linux:
+```
+dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
 ```
