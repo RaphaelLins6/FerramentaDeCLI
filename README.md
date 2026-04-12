@@ -53,7 +53,7 @@ ToolManutencao/
 3 - Para rodar diretamente:
 
 ```
-dotnet run --project src/FerramentaDeManutencao.Console
+Start-Process dotnet -ArgumentList "run --project src/FerramentaDeManutencao.csproj" -Verb RunAs
 ```
 
 4 - Para gerar o executável final para o Windows:
