@@ -19,7 +19,7 @@ Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação d
 
 ## 🛠️ Tecnologias e Ferramentas
 
-![.NET](https://img.shields.io/badge/.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white) ![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white) ![Gemini](https://img.shields.io/badge/AI--Assisted-Gemini-12B5DE?style=flat-square&logo=google-gemini&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white) ![Gemini](https://img.shields.io/badge/AI--Assisted-Gemini-12B5DE?style=flat-square&logo=google-gemini&logoColor=white)
 
 * **Linguagem:** C# (.NET 8)
 * **Interface:** Spectre.Console (Rich CLI)
