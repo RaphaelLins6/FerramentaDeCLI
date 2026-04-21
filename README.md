@@ -1,4 +1,4 @@
-# FERRAMENTA DE MANUTENÇÃO DE TI
+# <img src="src/infraestrutura-de-ti.ico" width="40" height="40" /> FERRAMENTA DE MANUTENÇÃO DE TI
 
 ## 📝 Descrição
 Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação de diagnósticos de hardware e instalação de softwares essenciais (setup) em novas máquinas.
@@ -11,8 +11,17 @@ Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação d
 * **Verificação de Hardware:** Monitoramento de SO, CPU, RAM e Disco.
 * **Instalação Automatizada:** Menu de seleção múltipla para instalação silenciosa de navegadores, runtimes, compressores e ferramentas de acesso remoto.
 * **Diagnóstico de Saúde:** Relatório rápido sobre a integridade do sistema.
+* **Ferramentas de Rede:** Comandos para identificar problemas na rede.
 * **Otimizações de Sistema:** Automação de comandos de CMD.
 * **Interface Moderna:** Relatório rápido sobre a integridade do sistema.
+
+---
+
+## 🛠️ Tecnologias e Ferramentas
+* **Linguagem:** C# (.NET 8) ![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+* **Interface:** Spectre.Console (Rich CLI)
+* **Consultas:** WMI (Windows Management Instrumentation)
+* **Desenvolvimento Assistido:** Google Gemini (Otimização de algoritmos de baixo nível, lógica de tratamento de erros S.M.A.R.T. e refinamento de UX/UI via terminal). ![Gemini](https://img.shields.io/badge/Developed%20with-Gemini-12B5DE?style=for-the-badge&logo=google-gemini&logoColor=white)
 
 ---
 
