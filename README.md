@@ -18,10 +18,13 @@ Ferramenta de linha de comando (CLI) desenvolvida em **.NET** para automação d
 ---
 
 ## 🛠️ Tecnologias e Ferramentas
-* **Linguagem:** C# (.NET 8) ![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+
+![.NET](https://img.shields.io/badge/.NET-512BD4?style=flat-square&logo=dotnet&logoColor=white) ![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white) ![Gemini](https://img.shields.io/badge/AI--Assisted-Gemini-12B5DE?style=flat-square&logo=google-gemini&logoColor=white)
+
+* **Linguagem:** C# (.NET 8)
 * **Interface:** Spectre.Console (Rich CLI)
 * **Consultas:** WMI (Windows Management Instrumentation)
-* **Desenvolvimento Assistido:** Google Gemini (Otimização de algoritmos de baixo nível, lógica de tratamento de erros S.M.A.R.T. e refinamento de UX/UI via terminal). ![Gemini](https://img.shields.io/badge/Developed%20with-Gemini-12B5DE?style=for-the-badge&logo=google-gemini&logoColor=white)
+* **Desenvolvimento Assistido:** Google Gemini (Otimização de algoritmos e UX/UI).
 
 ---
 
