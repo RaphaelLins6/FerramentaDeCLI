@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWindowsForms>false</UseWindowsForms>
+    <ApplicationIcon>infraestrutura-de-ti.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
