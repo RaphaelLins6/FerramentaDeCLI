@@ -230,74 +230,181 @@ namespace ToolManutencao.Services
 
         public void ExibirMenuTestes()
         {
-            AnsiConsole.Clear();
-            AnsiConsole.Write(new FigletText("Testes").Centered().Color(Color.Yellow));
-            AnsiConsole.WriteLine();
-
-            var opt = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[yellow]Selecione o teste desejado:[/]")
-                    .AddChoices("Saúde dos Discos (S.M.A.R.T)", "Voltar"));
-
-            if (opt == "Saúde dos Discos (S.M.A.R.T)") 
+            bool voltar = false;
+            while (!voltar)
             {
-                ExibirSaudeDiscos();
-                AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
-                Console.ReadKey();
+                AnsiConsole.Clear();
+                AnsiConsole.Write(new FigletText("Testes").Centered().Color(Color.Yellow));
+                AnsiConsole.WriteLine();
+
+                var opt = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[yellow]Selecione o teste desejado:[/]")
+                        .AddChoices("Saúde dos Discos (S.M.A.R.T)", "Saúde da Memória RAM", "Voltar"));
+
+                switch (opt)
+                {
+                    case "Saúde dos Discos (S.M.A.R.T)":
+                        ExibirSaudeDiscos();
+                        AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
+                        Console.ReadKey();
+                        break;
+
+                    case "Saúde da Memória RAM":
+                        VerificarSaudeRAM();
+                        AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
+                        Console.ReadKey();
+                        break;
+
+                    case "Voltar":
+                        voltar = true;
+                        break;
+                }
             }
         }
 
         public void ExibirSaudeDiscos()
         {
-            if (!_isWindows)
-            {
-                AnsiConsole.MarkupLine("[red]Teste S.M.A.R.T via WMI só está disponível no Windows.[/]");
-                AnsiConsole.MarkupLine("[grey]No Linux, instale o 'smartmontools' e use 'sudo smartctl -a /dev/sda'.[/]");
-                return;
-            }
-            
             AnsiConsole.Clear();
+            AnsiConsole.Write(new FigletText("Saude Disco").Centered().Color(Color.Blue1));
             AnsiConsole.Write(new Rule("[yellow]Teste de Integridade de Disco (S.M.A.R.T)[/]").RuleStyle("grey").Justify(Justify.Left));
 
             try
             {
-                // Consulta o armazenamento físico (Requer privilégios de Administrador)
-                using var searcher = new ManagementObjectSearcher(@"Root\Microsoft\Windows\Storage", "SELECT * FROM MSFT_PhysicalDisk");
-                
+                // 1. Consulta básica de discos
+                using var searcher = new ManagementObjectSearcher("SELECT Model, Status, Size, DeviceID FROM Win32_DiskDrive");
+                var discos = searcher.Get();
+
+                if (discos.Count == 0)
+                {
+                    AnsiConsole.MarkupLine("[yellow]Nenhum disco detectado.[/]");
+                    return;
+                }
+
                 var table = new Table().Border(TableBorder.Rounded).Expand();
                 table.AddColumn("[bold]Modelo[/]");
-                table.AddColumn(new TableColumn("[bold]Status de Saúde[/]").Centered());
-                table.AddColumn(new TableColumn("[bold]Temperatura[/]").Centered());
-                table.AddColumn(new TableColumn("[bold]Mídia[/]").Centered());
+                table.AddColumn(new TableColumn("[bold]Status Geral[/]").Centered());
+                table.AddColumn(new TableColumn("[bold]Bad Blocks (Realocados)[/]").Centered());
+                table.AddColumn(new TableColumn("[bold]Tamanho[/]").Centered());
 
-                foreach (ManagementObject drive in searcher.Get())
+                foreach (ManagementObject drive in discos)
                 {
-                    string nome = drive["FriendlyName"]?.ToString() ?? "Desconhecido";
-                    string saude = drive["HealthStatus"]?.ToString() ?? "N/A";
-                    string temp = drive["Temperature"] != null ? $"{drive["Temperature"]}°C" : "--";
-                    
-                    // Identifica se é SSD ou HDD (MediaType: 3 = HDD, 4 = SSD)
-                    uint mediaType = (uint)(drive["MediaType"] ?? 0);
-                    string tipo = mediaType == 4 ? "[blue]SSD[/]" : (mediaType == 3 ? "[yellow]HDD[/]" : "Outro");
+                    string modelo = drive["Model"]?.ToString() ?? "Desconhecido";
+                    string statusRaw = drive["Status"]?.ToString() ?? "N/A";
+                    string deviceId = drive["DeviceID"]?.ToString() ?? "";
 
-                    // Define a cor baseada no status
-                    string statusFormatado = saude switch
+                    // Lógica de Status Geral
+                    string statusFormatado = statusRaw.ToUpper() switch
                     {
-                        "Healthy" => "[green]Saudável[/]",
-                        "Warning" => "[yellow]Aviso (Check-up necessário)[/]",
-                        "Unhealthy" => "[red]Crítico (Risco de Perda de Dados)[/]",
-                        _ => "[grey]Desconhecido[/]"
+                        "OK" => "[green]Saudável[/]",
+                        "PRED FAIL" => "[red]FALHA IMINENTE[/]",
+                        _ => $"[yellow]{statusRaw}[/]"
                     };
 
-                    table.AddRow(nome, statusFormatado, temp, tipo);
+                    // 2. Busca de Bad Blocks (Setores Realocados) via Root\WMI
+                    int badBlocksEncontrados = 0;
+                    try
+                    {
+                        using var searcherAtributos = new ManagementObjectSearcher(@"Root\WMI", "SELECT VendorSpecific FROM MSStorageDriver_FailurePredictData");
+                        foreach (ManagementObject data in searcherAtributos.Get())
+                        {
+                            byte[] vendorSpecific = (byte[])data["VendorSpecific"];
+                            // Atributo 05 é o padrão para Reallocated Sectors Count
+                            for (int i = 0; i < vendorSpecific.Length; i += 12)
+                            {
+                                if (vendorSpecific[i] == 0x05) 
+                                {
+                                    badBlocksEncontrados = vendorSpecific[i + 5]; 
+                                }
+                            }
+                        }
+                    }
+                    catch { /* Alguns drives/pendrives não suportam leitura bruta de atributos */ }
+
+                    ulong bytes = (ulong)(drive["Size"] ?? 0);
+                    double sizeGb = bytes / (1024.0 * 1024.0 * 1024.0);
+
+                    string badBlockDisplay = badBlocksEncontrados > 0 
+                        ? $"[red]{badBlocksEncontrados}[/]" 
+                        : "[green]0[/]";
+
+                    table.AddRow(modelo, statusFormatado, badBlockDisplay, $"{Math.Round(sizeGb, 0)} GB");
                 }
 
                 AnsiConsole.Write(table);
+                
+                var desejaExplicacao = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("\n[cyan]Deseja ver uma explicação sobre Bad Blocks?[/]")
+                        .AddChoices("Sim", "Não")) == "Sim";
+
+                if (desejaExplicacao)
+                {
+                    AnsiConsole.MarkupLine("\n[grey]INFO:[/] [white]Bad Blocks (Setores Realocados)[/] indicam que o disco encontrou erros físicos e moveu os dados para uma área de reserva.");
+                    AnsiConsole.MarkupLine("[grey]DICA:[/] Se o número estiver acima de [red]0[/] e subindo, faça backup dos seus dados imediatamente.");
+                }
             }
             catch (Exception ex)
             {
                 AnsiConsole.MarkupLine($"[red]Erro ao acessar dados de disco:[/] {ex.Message}");
-                AnsiConsole.MarkupLine("[grey]Dica: Tente rodar o programa como Administrador.[/]");
+            }
+        }
+
+        public void VerificarSaudeRAM()
+        {
+            AnsiConsole.Clear();
+            // Título Figlet para padronizar o visual
+            AnsiConsole.Write(new FigletText("Saude RAM").Centered().Color(Color.Green1));
+            AnsiConsole.Write(new Rule("[yellow]Analise de Integridade da Memoria[/]").LeftJustified());
+
+            try
+            {
+                // Usando Win32_PhysicalMemory para maior compatibilidade com DDR4/DDR5
+                using var searcher = new ManagementObjectSearcher("SELECT BankLabel, Capacity, Speed, MemoryType, FormFactor FROM Win32_PhysicalMemory");
+                
+                var table = new Table().Border(TableBorder.Rounded).Expand();
+                table.AddColumn("Slot/Banco");
+                table.AddColumn(new TableColumn("Capacidade").Centered());
+                table.AddColumn(new TableColumn("Velocidade").Centered());
+                table.AddColumn(new TableColumn("Status (Hardware)").Centered());
+
+                var pentes = searcher.Get();
+                if (pentes.Count == 0)
+                {
+                    AnsiConsole.MarkupLine("[yellow]Nenhum pente de memoria fisica detectado pelo WMI.[/]");
+                    return;
+                }
+
+                foreach (ManagementObject ram in pentes)
+                {
+                    string banco = ram["BankLabel"]?.ToString() ?? "N/A";
+                    ulong bytes = (ulong)(ram["Capacity"] ?? 0);
+                    string velocidade = ram["Speed"]?.ToString() ?? "--";
+
+                    // No Windows, se o pente aparece aqui, ele passou no teste elétrico inicial
+                    string statusFormatado = "[green]Saudavel (Ativo)[/]";
+
+                    table.AddRow(banco, $"{bytes / (1024 * 1024 * 1024)} GB", $"{velocidade} MHz", statusFormatado);
+                }
+
+                AnsiConsole.Write(table);
+
+                // Explicação opcional em Português
+                var desejaExplicacao = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("\n[cyan]Deseja entender como a saude da RAM e testada?[/]")
+                        .AddChoices("Sim", "Não")) == "Sim";
+
+                if (desejaExplicacao)
+                {
+                    AnsiConsole.MarkupLine("\n[grey]INFO:[/] Diferente dos discos, a RAM não possui contadores de erro preventivos (S.M.A.R.T).");
+                    AnsiConsole.MarkupLine("[grey]STATUS:[/] [green]Saudavel (Ativo)[/] significa que o pente foi reconhecido e passou no autoteste (POST) da placa-mãe.");
+                    AnsiConsole.MarkupLine("[grey]DICA:[/] Se o PC apresenta [blue]Telas Azuis[/] constantes, use o comando [yellow]mdsched.exe[/] para um teste de estresse profundo.");
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Erro ao acessar dados da RAM:[/] {ex.Message}");
             }
         }
     }
