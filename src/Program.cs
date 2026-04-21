@@ -33,7 +33,7 @@ while (emExecucao)
         // No Linux, você pode adicionar opções futuras específicas como "Limpeza via APT"
         menuPrincipal.AddChoices("Limpeza de Sistema (Linux)");
     }
-
+    
     menuPrincipal.AddChoices("Sair");
 
     var opcao = AnsiConsole.Prompt(menuPrincipal);
@@ -45,14 +45,28 @@ while (emExecucao)
                 var table = hardwareService.GetHardwareTable();
                 AnsiConsole.Write(table);
             });
+            AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
+            Console.ReadKey();
             break;
 
         case "Otimizações de Sistema":
-            if (isWindows) MenuOtimizacaoWindows(automationService);
+            if (isWindows) 
+            {
+                // Chame o método do Service, ele já limpa a tela e coloca o título "Otimizacao"
+                automationService.ExibirMenuOtimizacoes(); 
+            }
             break;
 
         case "Ferramentas de Rede":
             automationService.DiagnosticoRede(); // Este método precisa ser ajustado no Service
+            break;
+
+        case "Instalar Softwares Básicos":
+            automationService.InstalarSoftwares(); // Este método deve ter o Figlet
+            break;
+
+        case "Testes de Hardware":
+            hardwareService.ExibirMenuTestes(); // Este método deve ter o Figlet
             break;
 
         case "Limpeza de Sistema (Linux)":
@@ -63,21 +77,4 @@ while (emExecucao)
             emExecucao = false;
             break;
     }
-
-    if (opcao != "Sair") {
-        AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
-        Console.ReadKey();
-    }
-}
-
-// Submenu isolado para não poluir o loop principal
-void MenuOtimizacaoWindows(AutomationService service) {
-    var opt = AnsiConsole.Prompt(
-        new SelectionPrompt<string>()
-            .Title("[yellow]Otimizações (Exclusivo Windows):[/]")
-            .AddChoices("Limpeza de Disco", "Reparo (SFC/DISM)", "Ativar Massgrave", "Voltar"));
-
-    if (opt == "Limpeza de Disco") service.LimparArquivosTemporarios();
-    if (opt == "Reparo (SFC/DISM)") service.RepararSistema();
-    if (opt == "Ativar Massgrave") service.AbrirMassgrave();
 }

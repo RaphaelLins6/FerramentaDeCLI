@@ -99,6 +99,21 @@ namespace ToolManutencao.Services
                 // Adiciona na tabela com o tipo entre parênteses
                 table.AddRow("Disco", $"{modelo} ({tipo}) - {tamanhoComercial}");
             }
+
+            // 5. GPU (Placa de Vídeo)
+            using var searcherGPU = new ManagementObjectSearcher("Select Name, AdapterRAM From Win32_VideoController");
+            foreach (ManagementObject obj in searcherGPU.Get())
+            {
+                string nomeGpu = obj["Name"]?.ToString() ?? "N/A";
+                
+                // O AdapterRAM pode retornar valores imprecisos em placas modernas, 
+                // mas serve como uma base para memória dedicada.
+                var bytesGpu = obj["AdapterRAM"] != null ? Convert.ToInt64(obj["AdapterRAM"]) : 0;
+                double vramGb = Math.Abs(bytesGpu) / (1024.0 * 1024.0 * 1024.0);
+
+                string infoVram = vramGb > 0 ? $" ({Math.Round(vramGb, 0)} GB VRAM)" : "";
+                table.AddRow("GPU", $"{nomeGpu}{infoVram}");
+            }
         }
 
         private void ObterDadosLinux(Table table)
@@ -153,6 +168,82 @@ namespace ToolManutencao.Services
                     // Ignora erros de operação não permitida (comum em sistemas de arquivos virtuais)
                     continue;
                 }
+            }
+
+            // 5. GPU (Linux)
+            try
+            {
+                // Tenta listar dispositivos de vídeo via barramento PCI
+                var gpuDevices = Directory.GetDirectories("/sys/bus/pci/devices");
+                bool gpuEncontrada = false;
+
+                foreach (var dev in gpuDevices)
+                {
+                    string classFile = Path.Combine(dev, "class");
+                    if (File.Exists(classFile))
+                    {
+                        string classId = File.ReadAllText(classFile).Trim();
+                        // 0x030000 é a classe para Display Controller (GPU)
+                        if (classId.StartsWith("0x0300"))
+                        {
+                            // Tenta ler o arquivo de 'uevent' que costuma conter o driver ou ID
+                            string ueventPath = Path.Combine(dev, "uevent");
+                            if (File.Exists(ueventPath))
+                            {
+                                var driverLine = File.ReadAllLines(ueventPath)
+                                    .FirstOrDefault(l => l.StartsWith("DRIVER="))?
+                                    .Split('=').Last();
+
+                                table.AddRow("GPU", $"Dispositivo PCI ({driverLine ?? "Genérico"})");
+                                gpuEncontrada = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!gpuEncontrada)
+                {
+                    // Alternativa via comando shell rápido caso o sysfs falhe
+                    var process = new System.Diagnostics.Process
+                    {
+                        StartInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "/bin/bash",
+                            Arguments = "-c \"lspci | grep -i vga | cut -d ':' -f3\"",
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        }
+                    };
+                    process.Start();
+                    string result = process.StandardOutput.ReadToEnd().Trim();
+                    if (!string.IsNullOrEmpty(result)) table.AddRow("GPU", result);
+                    else table.AddRow("GPU", "Não detectada");
+                }
+            }
+            catch
+            {
+                table.AddRow("GPU", "Erro ao detectar");
+            }
+        }
+
+        public void ExibirMenuTestes()
+        {
+            AnsiConsole.Clear();
+            AnsiConsole.Write(new FigletText("Testes").Centered().Color(Color.Yellow));
+            AnsiConsole.WriteLine();
+
+            var opt = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[yellow]Selecione o teste desejado:[/]")
+                    .AddChoices("Saúde dos Discos (S.M.A.R.T)", "Voltar"));
+
+            if (opt == "Saúde dos Discos (S.M.A.R.T)") 
+            {
+                ExibirSaudeDiscos();
+                AnsiConsole.MarkupLine("\n[grey]Pressione qualquer tecla para voltar...[/]");
+                Console.ReadKey();
             }
         }
 
