@@ -61,7 +61,7 @@ Start-Process dotnet -ArgumentList "run --project src/FerramentaDeManutencao.csp
 4 - Para gerar o executável final para o Windows:
 
 ```
-dotnet publish -c Release -r win-x64 --self-contained
+dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:PublishTrimmed=false /p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
 5 - Para gerar o executável final para o Linux:
